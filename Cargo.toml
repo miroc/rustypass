@@ -1,0 +1,4 @@
+[package]
+name = "rusty_pass"
+version = "0.1.0"
+authors = ["Miroslav Svitok <mirosvitok@gmail.com>"]
