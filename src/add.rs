@@ -8,11 +8,11 @@ fn usage(){
 	println!("{}", USAGE);
 }
 
-pub fn call(matches: &Matches, passwords: &mut Vec<PassEntry>){
-	passwords.push(PassEntry::new("Pokec.sk", "skaaj1", "secretsauce"));
-	passwords.push(PassEntry::new("Pokec.sk", "skaaj2", "secretsauce"));
-	passwords.push(PassEntry::new("Pokec.sk", "skaaj3", "secretsauce"));
-	passwords.push(PassEntry::new("Pokec.sk", "skaaj4", "secretsauce"));
-	//usage();
+pub fn call(params: &[String], passwords: &mut Vec<PassEntry>) {
+	if params.len() != 3 {
+		usage();	
+	} else {
+		passwords.push(PassEntry::new(params[0].as_ref(), &params[1].as_ref(), &params[2].as_ref()));		
+	}	
 	//println!("size of matches {}", 1);
 }

@@ -27,7 +27,6 @@ impl PassEntry {
 	//fn new(title: &str, username: &str, password: &str) -> PassEntry {
     fn new<S: Into<String>>(title: S, username: S, password: S) -> PassEntry {
 		PassEntry {
-			// creates a copy of string 
 			title: title.into(),
 			username: username.into(),
 			password: password.into()
@@ -90,7 +89,7 @@ fn main() {
     match command {
         Some(value) => match value.as_ref() {
             "add" => {
-                add::call(&matches, &mut passwords);                   
+                add::call(&matches.free[1..], &mut passwords);                   
             },
             "get" => {
                 
