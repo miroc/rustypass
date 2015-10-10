@@ -34,6 +34,7 @@ use std::fmt;
 use std::ptr;
 use std::borrow::Borrow;
 use std::borrow::BorrowMut;
+use serde::ser;
 
 /// A data type suitable for storing sensitive information such as passwords and private keys in memory, that implements:  
 /// 
@@ -44,6 +45,7 @@ use std::borrow::BorrowMut;
 /// 
 /// Be careful with `SecStr::from`: if you have a borrowed string, it will be copied.  
 /// Use `SecStr::new` if you have a `Vec<u8>`.
+#[derive(Serialize, Deserialize)]
 pub struct SecStr {
     content: Vec<u8>
 }
@@ -94,6 +96,13 @@ impl BorrowMut<[u8]> for SecStr {
         self.content.borrow_mut()
     }
 }
+
+// Serde serialization (manually) (TODO remove)
+//impl serde::ser::Serialize for SecStr {
+//    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
+//                
+//    }
+//}
 
 // Overwrite memory with zeros when we're done
 impl Drop for SecStr {

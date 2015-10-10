@@ -1,23 +1,22 @@
-#![allow(dead_code)] // TODO remove this later
+//#![allow(dead_code)] // TODO remove this later
+#![feature(custom_derive, plugin)]
+#![plugin(serde_macros)]
 
-mod secstr;
-mod add;
-
+extern crate serde;
+extern crate serde_json;
 extern crate getopts;
 
 use getopts::Options;
 use std::env;
-use std::path::Path; 
-use std::fs::File;
-use std::io::Write;
-use std::error::Error;
 use secstr::SecStr;
 
-
+mod secstr;
+mod add;
+mod db;
 
 // The `derive` attribute automatically creates the implementation
 // required to make this `struct` printable with `fmt::Debug`.
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PassEntry {
     title: String,
     username: String,
@@ -33,7 +32,7 @@ impl PassEntry {
 		PassEntry {
 			title: title.into(),
 			username: username.into(),
-			password: SecStr::from(password.clone()) // TODO avoid cloning??
+			password: SecStr::from(password.clone()) // todo avoid cloning??
 		}
 	}
 }
@@ -59,10 +58,6 @@ fn usage(){
     println!("{}", USAGE);
 }
 
-fn load_passwords(){
-
-}
-
 fn print_passwords(passwords: &Vec<PassEntry>){
     for pass in passwords {
         println!("pass entry {:?}", pass);
@@ -83,9 +78,8 @@ fn main() {
     if matches.opt_present("h") || matches.free.is_empty(){
         usage();
         return;
-    }
+    }    
     
-    // load passwords
     let mut passwords: Vec<PassEntry> = Vec::new();
     
     let command = matches.free.get(0);
@@ -103,26 +97,6 @@ fn main() {
         None => panic!("no command!"),
     }      
         
-    print_passwords(&passwords);    
-        
-        /*
-
-    let pass1 = PassEntry::new("Pokec.sk", "skaaj", "secretsauce");
-    // os independent path
-    let path = Path::new("db.txt");
-    let display = path.display();
-    
-    // Open a file in write-only mode, returns `io::Result<File>`
-    let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, Error::description(&why)),
-        Ok(file) => file,
-    };
-
-    // Write the `LOREM_IPSUM` string to `file`, returns `io::Result<()>`
-    match file.write_all(pass1.title.as_bytes()) {
-        Err(why) => {panic!("couldn't write to {}: {}", display, Error::description(&why))},
-        Ok(_) => {}//println!("successfully wrote to {}", display),
-    }
-        */
-    //println!("pass entry title {:?}", pass1);       
+    print_passwords(&passwords); 
+    db::save_passwords(&passwords);
 }

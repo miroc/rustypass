@@ -1,5 +1,4 @@
 extern crate getopts;
-use getopts::Matches;
 use PassEntry;
 
 static USAGE: &'static str = "Usage: rusty_pass add <title> <username> <password>"; 
