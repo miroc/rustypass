@@ -12,7 +12,14 @@ pub fn call(params: &[String], passwords: &mut Vec<PassEntry>) {
 	if params.len() != 3 {
 		usage();	
 	} else {
-		passwords.push(PassEntry::new(params[0].as_ref(), &params[1].as_ref(), &params[2].as_ref()));		
+		passwords.push(
+			PassEntry::new(
+				params[0].as_ref(), 
+				params[1].as_ref(),
+				&params[2]
+				//&params[2].into_bytes()
+				)
+		);		
 	}	
 	//println!("size of matches {}", 1);
 }

@@ -1,5 +1,8 @@
 #![allow(dead_code)] // TODO remove this later
 
+mod secstr;
+mod add;
+
 extern crate getopts;
 
 use getopts::Options;
@@ -8,9 +11,9 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Write;
 use std::error::Error;
-//use std::intrinsics;
+use secstr::SecStr;
 
-mod add;
+
 
 // The `derive` attribute automatically creates the implementation
 // required to make this `struct` printable with `fmt::Debug`.
@@ -18,18 +21,19 @@ mod add;
 pub struct PassEntry {
     title: String,
     username: String,
-    password: String       
+    password: SecStr       
 }
 
 impl PassEntry {
     //&str. This is a reference to another string
 	// no self -- associated function
 	//fn new(title: &str, username: &str, password: &str) -> PassEntry {
-    fn new<S: Into<String>>(title: S, username: S, password: S) -> PassEntry {
+    fn new<S: Into<String>>(title: S, username: S, password: &String) -> PassEntry {
+        //let () = password;
 		PassEntry {
 			title: title.into(),
 			username: username.into(),
-			password: password.into()
+			password: SecStr::from(password.clone()) // TODO avoid cloning??
 		}
 	}
 }
@@ -59,7 +63,7 @@ fn load_passwords(){
 
 }
 
-fn print_passwords(passwords :&Vec<PassEntry>){
+fn print_passwords(passwords: &Vec<PassEntry>){
     for pass in passwords {
         println!("pass entry {:?}", pass);
     }
