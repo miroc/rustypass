@@ -5,14 +5,17 @@
 extern crate serde;
 extern crate serde_json;
 extern crate getopts;
+extern crate rand;
 
 use getopts::Options;
 use std::env;
 use secstr::SecStr;
+use nacl::secretbox::{SecretKey, SecretMsg};
 
 mod secstr;
 mod add;
 mod db;
+mod nacl; // bindings to tweetnacl crypto library
 
 // The `derive` attribute automatically creates the implementation
 // required to make this `struct` printable with `fmt::Debug`.
@@ -67,6 +70,10 @@ fn print_passwords(passwords: &Vec<PassEntry>){
 fn main() {
     let args: Vec<String> = env::args().collect();
     //let program = args[0].clone();
+    
+    let key = SecretKey::from_str("some secret key");
+    let enc: SecretMsg = key.encrypt("my secret msg".as_bytes());
+    
     
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
