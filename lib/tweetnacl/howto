@@ -1,0 +1,2 @@
+gcc -Wall -fPIC -std=c99  -c tweetnacl.c -o tweetnacl.o
+ar rcs libtweetnacl.a tweetnacl.o

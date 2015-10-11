@@ -2,6 +2,7 @@
 name = "rusty_pass"
 version = "0.1.0"
 authors = ["Miroslav Svitok <mirosvitok@gmail.com>"]
+build = "build.rs"
 
 [dependencies]
 getopts = "0.2"
