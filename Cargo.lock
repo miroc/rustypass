@@ -4,6 +4,7 @@ version = "0.1.0"
 dependencies = [
  "gcc 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "getopts 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "knuckle 0.1.0 (git+https://github.com/erik/knuckle)",
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -38,6 +39,14 @@ dependencies = [
 name = "getopts"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "knuckle"
+version = "0.1.0"
+source = "git+https://github.com/erik/knuckle#9e625b94cc097f8be613374d30811d785d13cf6b"
+dependencies = [
+ "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "libc"
