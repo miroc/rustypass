@@ -6,15 +6,15 @@ extern crate serde;
 extern crate serde_json;
 extern crate getopts;
 extern crate rand;
-extern crate knuckle;
-
+//extern crate knukle;
 
 use getopts::Options;
 use std::env;
 use secstr::SecStr;
-//use nacl::secretbox::{SecretKey, SecretMsg};
-// TODO figure out why my impl doesn't work
-use knuckle::secretbox::{SecretKey, SecretMsg};
+use nacl::secretbox::{SecretKey, SecretMsg};
+// TODO figure out why my impl doesn't work (resolution: tweetnacl impl differs)
+// 
+//use knuckle::secretbox::{SecretKey, SecretMsg};
 
 mod secstr;
 mod add;

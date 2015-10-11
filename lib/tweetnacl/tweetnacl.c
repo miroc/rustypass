@@ -1,3 +1,4 @@
+// Original tweetnacl.c, version 20140427
 #include "tweetnacl.h"
 #define FOR(i,n) for (i = 0;i < n;++i)
 #define sv static void

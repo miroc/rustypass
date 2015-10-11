@@ -8,7 +8,7 @@ extern crate gcc;
 
 // TODO replace with https://github.com/alexcrichton/gcc-rs
 fn main() {
-    //gcc::compile_library("libtweetnacl.a", &["lib/tweetnacl/tweetnacl.c"]);
+    gcc::compile_library("libtweetnacl.a", &["lib/tweetnacl/tweetnacl.c"]);
 
 /*
     let out_dir = env::var("OUT_DIR").unwrap();
