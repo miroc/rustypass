@@ -29,12 +29,13 @@ For more information, please refer to <http://unlicense.org/>
 */
 
 //! A data type suitable for storing sensitive information such as passwords and private keys in memory, featuring constant time equality, mlock and zeroing out.
-extern crate libc;
+//extern crate libc;
 use std::fmt;
 use std::ptr;
 use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 use serde::ser;
+use libc;
 
 /// A data type suitable for storing sensitive information such as passwords and private keys in memory, that implements:  
 /// 

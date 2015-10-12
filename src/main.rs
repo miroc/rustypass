@@ -2,19 +2,19 @@
 #![feature(custom_derive, plugin)]
 #![plugin(serde_macros)]
 
+extern crate libc;
 extern crate serde;
 extern crate serde_json;
 extern crate getopts;
 extern crate rand;
-//extern crate knukle;
+extern crate crypto;
 
 use getopts::Options;
 use std::env;
 use secstr::SecStr;
 use nacl::secretbox::{SecretKey, SecretMsg};
-// TODO figure out why my impl doesn't work (resolution: tweetnacl impl differs)
-// 
-//use knuckle::secretbox::{SecretKey, SecretMsg};
+use rand::{ Rng, OsRng };
+use crypto::bcrypt::bcrypt;
 
 mod secstr;
 mod add;
@@ -75,8 +75,21 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     //let program = args[0].clone();
     
+    let pass = "deadly.job";
+    let mut salt = [0u8; 16]; // 16bytes of salt bcrypt
+    let mut output = [0u8; 24]; // output 24 bytes    
+    
+    OsRng::new().unwrap().fill_bytes(&mut salt);
+    
+    // TODO take only first 72 characters of input
+    bcrypt(10, &salt, pass.as_bytes(), &mut output);    
+    
+    /*
     let key = SecretKey::from_str("some secret key");
-    let enc: SecretMsg = key.encrypt("my secret msg".as_bytes());
+    let enc: SecretMsg = key.encrypt("abc".as_bytes());
+    
+    let decr_opt = key.decrypt(&enc);
+    println!("decrypted: {:?}", decr_opt.unwrap());    
     
     
     let mut opts = Options::new();
@@ -109,5 +122,5 @@ fn main() {
     }      
         
     print_passwords(&passwords); 
-    db::save_passwords(&passwords);
+    db::save_passwords(&passwords);*/
 }

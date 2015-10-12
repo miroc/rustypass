@@ -6,7 +6,6 @@ use std::process::Command;
 // invoking the C compiler.
 extern crate gcc;
 
-// TODO replace with https://github.com/alexcrichton/gcc-rs
 fn main() {
     gcc::compile_library("libtweetnacl.a", &["lib/tweetnacl/tweetnacl.c"]);
 

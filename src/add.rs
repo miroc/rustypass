@@ -1,4 +1,4 @@
-extern crate getopts;
+//extern crate getopts;
 use PassEntry;
 
 static USAGE: &'static str = "Usage: rusty_pass add <title> <username> <password>"; 
