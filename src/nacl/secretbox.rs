@@ -36,7 +36,7 @@ pub const KEY_BYTES: usize = 32; //256b
 pub const NONCE_BYTES: usize = 24; // 192b
 /// Size of the zero padding applied to each message.
 /// Corresponds to crypto_secretbox_ZEROBYTES
-pub const ZERO_BYTES: usize = 32; // 256b 
+pub const ZERO_BYTES: usize = 32; // 256b
 
 
 /// Encapsulates both the nonce value and cipher text returned by `encrypt`.
@@ -103,11 +103,11 @@ impl SecretKey {
         let &SecretKey(sk) = self;
 
         unsafe {
-            let mut cipher: Vec<u8> = repeat(0u8).take(stretched.len()).collect();            
-            
+            let mut cipher: Vec<u8> = repeat(0u8).take(stretched.len()).collect();
+
             // generate Nonce from os source or rand (e.g. linux /dev/urandom)
             // TODO verify we have enough entropy
-            OsRng::new().unwrap().fill_bytes(&mut nonce);                        
+            OsRng::new().unwrap().fill_bytes(&mut nonce);
             //randombytes(nonce.as_mut_ptr(), NONCE_BYTES as u64);
 
             // TODO: Better error handling

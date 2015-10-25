@@ -1,24 +1,25 @@
 //extern crate getopts;
-use PassEntry;
+use db::Entry;
+use db::Database;
 
-static USAGE: &'static str = "Usage: rusty_pass add <title> <username> <password>"; 
+static USAGE: &'static str = "Usage: rusty_pass add <title> <username> <password>";
 
 fn usage(){
 	println!("{}", USAGE);
 }
 
-pub fn call(params: &[String], passwords: &mut Vec<PassEntry>) {
+pub fn call(params: &[String], db: &mut Database) {
 	if params.len() != 3 {
-		usage();	
+		usage();
 	} else {
-		passwords.push(
-			PassEntry::new(
-				params[0].as_ref(), 
+		db.add(
+			Entry::new(
+				params[0].as_ref(),
 				params[1].as_ref(),
 				&params[2]
 				//&params[2].into_bytes()
 				)
-		);		
-	}	
+		);
+	}
 	//println!("size of matches {}", 1);
 }

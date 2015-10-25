@@ -1,203 +1,187 @@
-// Secure string library for Rust
-// by https://github.com/myfreeweb/secstr
-
-/*
-This is free and unencumbered software released into the public domain.
-
-Anyone is free to copy, modify, publish, use, compile, sell, or
-distribute this software, either in source code form or as a compiled
-binary, for any purpose, commercial or non-commercial, and by any
-means.
-
-In jurisdictions that recognize copyright laws, the author or authors
-of this software dedicate any and all copyright interest in the
-software to the public domain. We make this dedication for the benefit
-of the public at large and to the detriment of our heirs and
-successors. We intend this dedication to be an overt act of
-relinquishment in perpetuity of all present and future rights to this
-software under copyright law.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
-
-For more information, please refer to <http://unlicense.org/>
-*/
-
-//! A data type suitable for storing sensitive information such as passwords and private keys in memory, featuring constant time equality, mlock and zeroing out.
-//extern crate libc;
-use std::fmt;
+use libc::{c_void, size_t};
+use libc::funcs::posix88::mman;
 use std::ptr;
-use std::borrow::Borrow;
-use std::borrow::BorrowMut;
-use serde::ser;
-use libc;
+use rand::{ Rng, OsRng };
+use nacl::stream::{self, stream_encrypt_xor};
 
-/// A data type suitable for storing sensitive information such as passwords and private keys in memory, that implements:  
-/// 
-/// - Automatic zeroing in `Drop`  
-/// - Constant time comparison in `PartialEq` (does not short circuit on the first different character; but terminates instantly if strings have different length)  
-/// - Outputting `***SECRET***` to prevent leaking secrets into logs in `fmt::Debug` and `fmt::Display`  
-/// - Automatic `mlock` to protect against leaking into swap  
-/// 
-/// Be careful with `SecStr::from`: if you have a borrowed string, it will be copied.  
-/// Use `SecStr::new` if you have a `Vec<u8>`.
-#[derive(Serialize, Deserialize)]
+#[doc = "
+SecStr implements a secure string. This means in particular:
+* The input string moves to the struct, i.e. it's not just borrowed
+* The string is encrypted with a random password for obfuscation
+* mlock() is called on the string to prevent swapping
+* A method to overwrite the string with zeroes is implemented
+* The overwrite method is called on drop of the struct automatically
+* Implements fmt::Show to prevent logging of the secrets, i.e. you can
+  access the plaintext string only via the string value.
+"]
 pub struct SecStr {
-    content: Vec<u8>
+    /// Holds the decrypted string if unlock() is called.
+    /// Don't forget to call delete if you don't need the decrypted
+    /// string anymore.
+    /// Use String as type to move ownership to the struct.
+    pub string: String,
+    // Use of Vec instead of &[u8] because specific lifetimes aren't needed
+    //encrypted: SecretMsg,
+    //password: SecretKey
+
+    encrypted_string: Vec<u8>,
+    password: Vec<u8>,
+    iv: Vec<u8>,
 }
 
 impl SecStr {
-    pub fn new(cont: Vec<u8>) -> SecStr {
-        memlock::mlock(&cont);
-        SecStr { content: cont }
-    }
+    /// Create a new SecureString
+    /// The input string should already lie on the heap, i.e. the type should
+    /// be String and not &str, otherwise a copy of the plain text string would
+    /// lie in memory. The string will be automatically encrypted and deleted.
+    pub fn new(string: String) -> SecStr {
+        // Lock the string against swapping
+        unsafe { mman::mlock(string.as_ptr() as *const c_void,
+                             string.len() as size_t); }
 
-    /// Borrow the contents of the string.
-    pub fn unsecure(&self) -> &[u8] {
-        self.borrow()
-    }
 
-    /// Mutably borrow the contents of the string.
-    pub fn unsecure_mut(&mut self) -> &mut [u8] {
-        self.borrow_mut()
-    }
+        // todo why does rng has to be mutable?
+        let mut rng = OsRng::new().unwrap();
 
-    #[inline(never)]
-    /// Overwrite the string with zeros. This is automatically called in the destructor.
-    pub fn zero_out(&mut self) {
+        // let mut x: Box<[u8; stream::NONCE_BYTES]>;
+        // rng.fill_bytes(x);
+
+        let mut sec_str = SecStr {
+            string: string,
+            encrypted_string: vec![],
+            password: (0..stream::KEY_BYTES).map(|_| rng.gen::<u8>()).collect(),
+            iv: (0..stream::NONCE_BYTES).map(|_| rng.gen::<u8>()).collect()
+        };
         unsafe {
-            // TODO guarantee that this is not removed by compiler 
-            // https://users.rust-lang.org/t/optimization-by-the-compiler-of-non-volatile-and-volatile-io-operations/3181
-            ptr::write_bytes(self.content.as_ptr() as *mut libc::c_void, 0, self.content.len());
+            mman::mlock(sec_str.encrypted_string.as_ptr() as *const c_void,
+                             sec_str.encrypted_string.len() as size_t);
         }
+        sec_str.lock();
+        sec_str.delete();
+        sec_str
+    }
+
+    /// Overwrite the string with zeroes. Call this everytime after unlock() if you don't
+    /// need the string anymore.
+    pub fn delete(&self) {
+        // Use volatile_set_memory to make sure that the operation is executed.
+        unsafe {
+            // https://users.rust-lang.org/t/optimization-by-the-compiler-of-non-volatile-and-volatile-io-operations/3181
+            ptr::write_bytes(self.string.as_ptr() as *mut c_void, 0u8, self.string.len());
+            // intrinsics::volatile_set_memory(self.string.as_ptr() as *mut c_void, 0u8,
+                                                //  self.string.len())
+        };
+    }
+
+    fn lock(&mut self) {
+        self.encrypted_string = stream_encrypt_xor(
+            self.string.as_bytes(),
+            &self.iv,
+            &self.password);
+    }
+
+    /// Unlock the string, i.e. decrypt it and make it available via the string value.
+    /// Don't forget to call delete() if you don't need the plain text anymore.
+    pub fn unlock(&mut self) {
+        self.string = String::from_utf8(
+            stream_encrypt_xor(
+                &self.encrypted_string,
+                &self.iv,
+                &self.password
+            )
+        ).unwrap();
+
     }
 }
 
-// Creation
-impl<T> From<T> for SecStr where T: Into<Vec<u8>> {
-    fn from(s: T) -> SecStr {
-        SecStr::new(s.into())
-    }
-}
-
-// Borrowing
-impl Borrow<[u8]> for SecStr {
-    fn borrow(&self) -> &[u8] {
-        self.content.borrow()
-    }
-}
-
-impl BorrowMut<[u8]> for SecStr {
-    fn borrow_mut(&mut self) -> &mut [u8] {
-        self.content.borrow_mut()
-    }
-}
-
-// Serde serialization (manually) (TODO remove)
-//impl serde::ser::Serialize for SecStr {
-//    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error> where S: Serializer {
-//                
-//    }
-//}
-
-// Overwrite memory with zeros when we're done
+// string value and encrypted_string value will be overwritten with zeroes after drop of struct
 impl Drop for SecStr {
     fn drop(&mut self) {
-        self.zero_out();
-        memlock::munlock(&self.content);
-    }
-}
+        self.delete();
+        unsafe { mman::munlock(self.string.as_ptr() as *const c_void,
+                               self.string.len() as size_t);
 
-// Constant time comparison
-impl PartialEq for SecStr {
-    #[inline(never)]
-    fn eq(&self, other: &SecStr) -> bool {
-        let ref us = self.content;
-        let ref them = other.content;
-        if us.len() != them.len() {
-            return false;
-        }
-        let mut result = 0;
-        for i in 0..us.len() {
-            result |= us[i] ^ them[i];
-        }
-        result == 0
-    }
-}
 
-// Make sure sensitive information is not logged accidentally
-impl fmt::Debug for SecStr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("***SECRET***").map_err(|_| { fmt::Error })
-    }
-}
+                ptr::write_bytes(self.encrypted_string.as_ptr() as *mut c_void, 0u8,
+                                                self.encrypted_string.len());
+                //  intrinsics::volatile_set_memory(self.encrypted_string.as_ptr() as *mut c_void, 0u8,
+                                                //  self.encrypted_string.len());
 
-impl fmt::Display for SecStr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("***SECRET***").map_err(|_| { fmt::Error })
-    }
-}
 
-#[cfg(unix)]
-mod memlock {
-    extern crate libc;
-    use self::libc::funcs::posix88::mman;
-
-    pub fn mlock(cont: &Vec<u8>) {
-        unsafe {
-            mman::mlock(cont.as_ptr() as *const libc::c_void, cont.len() as libc::size_t);
-        }
-    }
-
-    pub fn munlock(cont: &Vec<u8>) {
-        unsafe {
-            mman::munlock(cont.as_ptr() as *const libc::c_void, cont.len() as libc::size_t);
-        }
-    }
-}
-
-#[cfg(not(unix))]
-mod memlock {
-    fn mlock(cont: &Vec<u8>) {
-    }
-
-    fn munlock(cont: &Vec<u8>) {
+             mman::munlock(self.encrypted_string.as_ptr() as *const c_void,
+                               self.encrypted_string.len() as size_t); }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::SecStr;
+    use std::str;
+    use std::ptr::copy;
 
     #[test]
-    fn test_basic() {
-        let my_sec = SecStr::from("hello");
-        assert_eq!(my_sec, SecStr::from("hello".to_string()));
-        assert_eq!(my_sec.unsecure(), b"hello");
+    fn test_drop() {
+        let mut test_vec:  Vec<u8> = Vec::with_capacity(4);
+        let mut test_vec2: Vec<u8> = Vec::with_capacity(4);
+        unsafe {
+            test_vec.set_len(4);
+            test_vec2.set_len(4);
+            let str = "drop".to_string();
+            let mut sec_str = SecStr::new(str);
+            let enc_str_ptr = sec_str.encrypted_string.as_mut_ptr();
+            let str_ptr = sec_str.string.as_mut_vec().as_mut_ptr();
+            drop(sec_str);
+            copy(enc_str_ptr, test_vec.as_mut_ptr(), 4);
+            copy(str_ptr, test_vec2.as_mut_ptr(), 4);
+        }
+        assert_eq!(test_vec,  vec![0u8, 0u8, 0u8, 0u8]);
+        assert_eq!(test_vec2, vec![0u8, 0u8, 0u8, 0u8]);
+    }
+    #[test]
+    fn test_new() {
+        let str = "Hello, box!".to_string();
+        // Ownership of str moves to SecureString <- secure input interface
+        let mut sec_str = SecStr::new(str);
+        sec_str.unlock();
+        assert_eq!(sec_str.string, "Hello, box!");
     }
 
     #[test]
-    fn test_zero_out() {
-        let mut my_sec = SecStr::from("hello");
-        my_sec.zero_out();
-        assert_eq!(my_sec.unsecure(), b"\x00\x00\x00\x00\x00");
+    fn test_delete() {
+        let str = "delete".to_string();
+        let sec_str = SecStr::new(str);
+        assert_eq!(sec_str.string, "\0\0\0\0\0\0");
+
+        // Test with umlauts
+        let str = "ä".to_string();
+        let sec_str = SecStr::new(str);
+        assert_eq!(sec_str.string, "\0\0");
     }
 
     #[test]
-    fn test_comparison() {
-        assert_eq!(SecStr::from("hello"),  SecStr::from("hello"));
-        assert!(  SecStr::from("hello") != SecStr::from("yolo"));
-        assert!(  SecStr::from("hello") != SecStr::from("olleh"));
+    fn test_lock() {
+        let str = "delete".to_string();
+        let mut sec_str = SecStr::new(str);
+
+        assert!(str::from_utf8(&sec_str.encrypted_string) !=  Ok("delete"));
+
+        sec_str.unlock();
+        assert_eq!(sec_str.string, "delete");
     }
 
     #[test]
-    fn test_show() {
-        assert_eq!(format!("{}", SecStr::from("hello")), "***SECRET***".to_string());
-    }
+    fn test_encryption() {
+        let str = "delete".to_string();
+        let sec_str = SecStr::new(str);
 
+        let str = "delete".to_string();
+        let mut sec_str2 = SecStr::new(str);
+        assert!(sec_str.encrypted_string != sec_str2.encrypted_string);
+
+        sec_str2.unlock();
+        sec_str2.iv = sec_str.iv.clone();
+        sec_str2.password = sec_str.password.clone();
+        sec_str2.lock();
+        assert_eq!(sec_str.encrypted_string, sec_str2.encrypted_string);
+    }
 }
