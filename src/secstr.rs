@@ -3,6 +3,7 @@ use libc::funcs::posix88::mman;
 use std::ptr;
 use rand::{ Rng, OsRng };
 use nacl::stream::{self, stream_encrypt_xor};
+use serde::ser::{Serialize, Serializer};
 
 #[doc = "
 SecStr implements a secure string. This means in particular:
@@ -90,7 +91,26 @@ impl SecStr {
                 &self.password
             )
         ).unwrap();
+    }
 
+    // Private export function used for serialization to json
+    fn export(&self) -> String{
+        String::from_utf8(
+            stream_encrypt_xor(
+                &self.encrypted_string,
+                &self.iv,
+                &self.password
+            )
+        ).unwrap()
+    }
+}
+
+// Serde json serialization
+impl Serialize for SecStr {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        serializer.visit_str(self.export().as_ref();
     }
 }
 
