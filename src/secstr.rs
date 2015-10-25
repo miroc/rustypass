@@ -1,6 +1,7 @@
 use libc::{c_void, size_t};
 use libc::funcs::posix88::mman;
 use std::ptr;
+use std::fmt;
 use rand::{ Rng, OsRng };
 use nacl::stream::{self, stream_encrypt_xor};
 use serde::ser::{Serialize, Serializer};
@@ -110,7 +111,20 @@ impl Serialize for SecStr {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
         where S: Serializer,
     {
-        serializer.visit_str(self.export().as_ref();
+        serializer.visit_str(self.export().as_ref())
+    }
+}
+
+// Make sure sensitive information is not logged accidentally
+impl fmt::Debug for SecStr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("***SECRET***").map_err(|_| { fmt::Error })
+    }
+}
+
+impl fmt::Display for SecStr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("***SECRET***").map_err(|_| { fmt::Error })
     }
 }
 

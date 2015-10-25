@@ -1,3 +1,5 @@
+#![feature(custom_derive, plugin)] // required by serde_macros for nightly rust
+
 extern crate libc;
 extern crate serde;
 extern crate serde_json;
@@ -10,7 +12,7 @@ use getopts::Options;
 use std::env;
 use secstr::SecStr;
 use rustc_serialize::base64::{self, FromBase64, ToBase64};
-use db::Database;
+use db::{Database, Entry};
 
 mod secstr;
 mod add;
@@ -40,7 +42,8 @@ fn usage(){
 
 fn main() {
 
-    let db = Database::new("test");
+    let mut db = Database::new("test");
+    db.add(Entry::new("Gmail", "mirosvitok", "rubik24"));
     db.save();
 
     let mut s = SecStr::new("wakalaka".to_string());

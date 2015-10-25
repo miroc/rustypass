@@ -7,6 +7,7 @@ use db::Entry;
 use nacl::secretbox::{SecretKey, SecretMsg};
 use rand::{ Rng, OsRng };
 use crypto::bcrypt::bcrypt;
+use serde_json;
 
 static DEFAULT_DB_LOCATION: &'static str = "./rustypass.db";
 
@@ -51,11 +52,11 @@ impl Database {
         };
         println!("db successfully saved");
 
-        // let serialized = serde_json::to_string(passwords).unwrap();
-        // match writeln!(file, "{}", serialized) {
-        //     Err(why) => {panic!("couldn't write to {}: {}", display, Error::description(&why))},
-        //     Ok(_) => {}//println!("successfully wrote to {}", display),
-        // }
+        let serialized = serde_json::to_string(&self.passwords).unwrap();
+        match writeln!(file, "{}", serialized) {
+            Err(why) => {panic!("couldn't write to {}: {}", display, Error::description(&why))},
+            Ok(_) => {}//println!("successfully wrote to {}", display),
+        }
     }
 
     pub fn add(&mut self, entry: Entry){
