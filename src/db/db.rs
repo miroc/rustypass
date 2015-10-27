@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::fs::File;
 use std::io::Write;
+use std::io::Read;
+use std::io;
 use std::error::Error;
 use secstr::SecStr;
 use db::Entry;
@@ -24,7 +26,8 @@ impl Database {
         OsRng::new().unwrap().fill_bytes(&mut salt);
 
         // TODO take only first 72 characters of input
-        bcrypt(10, &salt, password.as_bytes(), &mut output);
+        //bcrypt(10, &salt, password.as_bytes(), &mut output);
+
         // let salt_string = salt.to_base64(base64::STANDARD);
         // let pass_hash = output.to_base64(base64::STANDARD);
 
@@ -35,9 +38,21 @@ impl Database {
 		}
     }
 
-    pub fn open(password: &str) -> Database {
+    pub fn open(password: &str) -> io::Result<Database> {
         // TODO do not generate salt, take one from
-		return Database::new(password);
+		//
+
+        let path = Path::new(DEFAULT_DB_LOCATION);
+        let display = path.display();
+        let mut file = try!(File::open(path));
+
+        let mut buffer = String::new();
+        try!(file.read_to_string(&mut buffer));
+
+        println!("{}", buffer);
+
+
+        Ok(Database::new(password))
 	}
 
     pub fn save(&self){
@@ -46,7 +61,7 @@ impl Database {
         let display = path.display();
 
         // Open a file in write-only mode, returns `io::Result<File>`
-        let mut file = match File::create(&path) {
+        let mut file = match File::create(path) {
             Err(why) => panic!("couldn't create {}: {}", display, Error::description(&why)),
             Ok(file) => file,
         };

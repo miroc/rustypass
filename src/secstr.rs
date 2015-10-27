@@ -5,6 +5,8 @@ use std::fmt;
 use rand::{ Rng, OsRng };
 use nacl::stream::{self, stream_encrypt_xor};
 use serde::ser::{Serialize, Serializer};
+use serde::de::impls::PrimitiveVisitor;
+use serde::de::{Deserialize, Deserializer, Visitor, Error};
 
 #[doc = "
 SecStr implements a secure string. This means in particular:
@@ -106,15 +108,6 @@ impl SecStr {
     }
 }
 
-// Serde json serialization
-impl Serialize for SecStr {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: Serializer,
-    {
-        serializer.visit_str(self.export().as_ref())
-    }
-}
-
 // Make sure sensitive information is not logged accidentally
 impl fmt::Debug for SecStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -144,6 +137,34 @@ impl Drop for SecStr {
 
              mman::munlock(self.encrypted_string.as_ptr() as *const c_void,
                                self.encrypted_string.len() as size_t); }
+    }
+}
+
+// Serialization infrastructure
+impl Serialize for SecStr {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: Serializer,
+    {
+        serializer.visit_str(self.export().as_ref())
+    }
+}
+
+impl Deserialize for SecStr {
+    fn deserialize<D>(deserializer: &mut D) -> Result<SecStr, D::Error>
+        where D: Deserializer,
+    {
+        // SecStrVisitor -- initializes structure
+        deserializer.visit_string(SecStrVisitor)
+    }
+}
+
+struct SecStrVisitor;
+impl Visitor for SecStrVisitor {
+    type Value = SecStr; // associated type
+    fn visit_string<E>(&mut self, v: String) -> Result<SecStr, E>
+        where E: Error,
+    {
+        Ok(SecStr::new(v))
     }
 }
 

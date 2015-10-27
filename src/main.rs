@@ -1,8 +1,10 @@
-#![feature(custom_derive, plugin)] // required by serde_macros for nightly rust
+#![feature(custom_derive, plugin)]
+#![plugin(serde_macros)]
 
-extern crate libc;
 extern crate serde;
 extern crate serde_json;
+
+extern crate libc;
 extern crate getopts;
 extern crate rand;
 extern crate crypto;
@@ -10,18 +12,20 @@ extern crate rustc_serialize;
 
 use getopts::Options;
 use std::env;
+use std::error::Error;
 use secstr::SecStr;
 use rustc_serialize::base64::{self, FromBase64, ToBase64};
-use db::{Database, Entry};
+use db::{Database};
 
 mod secstr;
 mod add;
 mod db;
 mod nacl; // bindings to tweetnacl crypto library
 
+
 static USAGE: &'static str = "Usage: rusty_pass [OPTIONS] COMMAND [arg...]
 
-RustyPass is keeping your passwords safe, while:
+MultiPass is keeping your passwords safe, while:
     * being memory safe by default (unlike C/C++)
     * having no runtime (unlike java, C#, go)
     * no interpreted code (unlike python, ruby)
@@ -42,14 +46,28 @@ fn usage(){
 
 fn main() {
 
-    let mut db = Database::new("test");
-    db.add(Entry::new("Gmail", "mirosvitok", "rubik24"));
-    db.save();
+    // let mut db = Database::new("test");
+    let mut db = match Database::open("test") {
+        Err(why) => {
+            panic!("couldn't open {}", Error::description(&why));
+        }
+        Ok(database) => database
+    };
 
-    let mut s = SecStr::new("wakalaka".to_string());
-    s.unlock();
-    s.delete();
-    println!("{}", &s.string);
+
+
+
+    // serde_json::from_str(&serialized).unwrap();
+
+    // db.add(Entry::new("service_a", "name_a", "pass_a"));
+    // db.add(Entry::new("service_b", "name_b", "pass_b"));
+    // db.add(Entry::new("service_c", "name_c", "pass_c"));
+    // db.save();
+
+    // let mut s = SecStr::new("wakalaka".to_string());
+    // s.unlock();
+    // s.delete();
+    // println!("{}", &s.string);
 
 
     // let args: Vec<String> = env::args().collect();

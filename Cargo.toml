@@ -5,11 +5,11 @@ authors = ["Miroslav Svitok <mirosvitok@gmail.com>"]
 build = "build.rs"
 
 [dependencies]
-getopts = "0.2"
-libc = "0.1.10"
 serde = "*"
 serde_json = "*"
 serde_macros = "*"
+getopts = "0.2"
+libc = "0.1.10"
 rand = "0.3.11"
 rust-crypto = "*"
 rustc-serialize = "0.3"
