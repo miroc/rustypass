@@ -49,8 +49,8 @@ impl Database {
         let mut buffer = String::new();
         try!(file.read_to_string(&mut buffer));
 
-        println!("{}", buffer);
-
+        let deserialized: Vec<Entry> = serde_json::from_str(&buffer).unwrap();
+        println!("deserialized: {:?}", deserialized);
 
         Ok(Database::new(password))
 	}

@@ -153,18 +153,18 @@ impl Deserialize for SecStr {
     fn deserialize<D>(deserializer: &mut D) -> Result<SecStr, D::Error>
         where D: Deserializer,
     {
-        // SecStrVisitor -- initializes structure
-        deserializer.visit_string(SecStrVisitor)
+        deserializer.visit(SecStrVisitor)
     }
 }
 
 struct SecStrVisitor;
 impl Visitor for SecStrVisitor {
     type Value = SecStr; // associated type
-    fn visit_string<E>(&mut self, v: String) -> Result<SecStr, E>
+
+    fn visit_str<E>(&mut self, v: &str) -> Result<SecStr, E>
         where E: Error,
     {
-        Ok(SecStr::new(v))
+        Ok(SecStr::new(v.to_string()))
     }
 }
 

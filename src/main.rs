@@ -15,7 +15,7 @@ use std::env;
 use std::error::Error;
 use secstr::SecStr;
 use rustc_serialize::base64::{self, FromBase64, ToBase64};
-use db::{Database};
+use db::{Database, Entry};
 
 mod secstr;
 mod add;
@@ -46,18 +46,13 @@ fn usage(){
 
 fn main() {
 
-    // let mut db = Database::new("test");
+    let mut db = Database::new("test");
     let mut db = match Database::open("test") {
         Err(why) => {
             panic!("couldn't open {}", Error::description(&why));
         }
         Ok(database) => database
     };
-
-
-
-
-    // serde_json::from_str(&serialized).unwrap();
 
     // db.add(Entry::new("service_a", "name_a", "pass_a"));
     // db.add(Entry::new("service_b", "name_b", "pass_b"));
