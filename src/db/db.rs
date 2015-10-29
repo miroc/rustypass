@@ -4,7 +4,6 @@ use std::io::{Write, Read, self, Error, ErrorKind};
 use secstr::SecStr;
 use db::Entry;
 use nacl::secretbox::{SecretKey, SecretMsg};
-use rustc_serialize::base64::{self, FromBase64, ToBase64};
 use rand::{ Rng, OsRng };
 use crypto::bcrypt::bcrypt;
 use serde_json;
@@ -107,10 +106,6 @@ impl Database {
         try!(file.flush());
 
         Ok(())
-    }
-
-    fn get_pass(&self) -> String{
-        self.bcrypt_pass.to_base64(base64::STANDARD)
     }
 
     pub fn add(&mut self, entry: Entry){

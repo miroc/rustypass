@@ -8,7 +8,6 @@ extern crate libc;
 extern crate getopts;
 extern crate rand;
 extern crate crypto;
-extern crate rustc_serialize;
 
 use getopts::Options;
 use std::env;
