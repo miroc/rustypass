@@ -43,12 +43,7 @@ impl SecStr {
         unsafe { mman::mlock(string.as_ptr() as *const c_void,
                              string.len() as size_t); }
 
-
-        // todo why does rng has to be mutable?
         let mut rng = OsRng::new().unwrap();
-
-        // let mut x: Box<[u8; stream::NONCE_BYTES]>;
-        // rng.fill_bytes(x);
 
         let mut sec_str = SecStr {
             string: string,
@@ -97,7 +92,7 @@ impl SecStr {
     }
 
     // Private export function used for serialization to json
-    fn export(&self) -> String{
+    fn export(&self) -> String {
         String::from_utf8(
             stream_encrypt_xor(
                 &self.encrypted_string,
@@ -128,14 +123,10 @@ impl Drop for SecStr {
         unsafe { mman::munlock(self.string.as_ptr() as *const c_void,
                                self.string.len() as size_t);
 
-
-                ptr::write_bytes(self.encrypted_string.as_ptr() as *mut c_void, 0u8,
+            ptr::write_bytes(self.encrypted_string.as_ptr() as *mut c_void, 0u8,
                                                 self.encrypted_string.len());
-                //  intrinsics::volatile_set_memory(self.encrypted_string.as_ptr() as *mut c_void, 0u8,
-                                                //  self.encrypted_string.len());
 
-
-             mman::munlock(self.encrypted_string.as_ptr() as *const c_void,
+            mman::munlock(self.encrypted_string.as_ptr() as *const c_void,
                                self.encrypted_string.len() as size_t); }
     }
 }
