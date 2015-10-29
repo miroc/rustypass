@@ -1,9 +1,6 @@
 use std::path::Path;
 use std::fs::File;
-use std::io::Write;
-use std::io::Read;
-use std::io;
-use std::error::Error;
+use std::io::{Write, Read, self, Error, ErrorKind};
 use secstr::SecStr;
 use db::Entry;
 use nacl::secretbox::{SecretKey, SecretMsg};
@@ -16,11 +13,13 @@ static DEFAULT_DB_LOCATION: &'static str = "./rustypass.db";
 
 const SALT_SIZE: usize = 16;
 const PASS_SIZE: usize = 24;
+// TODO 10 iterations instead of 5
+const BCRYPT_COST: u32 = 5;
 
 pub struct Database {
     bcrypt_salt: [u8; SALT_SIZE],
     bcrypt_pass: [u8; PASS_SIZE],
-    passwords: Vec<Entry>
+    entries: Vec<Entry>
 }
 
 impl Database {
@@ -30,30 +29,55 @@ impl Database {
         OsRng::new().unwrap().fill_bytes(&mut salt);
 
         // TODO take only first 72 characters of input
-        // TODO 10 iterations instead of 5
-        bcrypt(5, &salt, password.as_bytes(), &mut output);
-        // let salt_string = salt.to_base64(base64::STANDARD);
-        // let pass_hash = output.to_base64(base64::STANDARD);
+        bcrypt(BCRYPT_COST, &salt, password.as_bytes(), &mut output);
 
         Database {
             bcrypt_salt: salt,
             bcrypt_pass: output,
-            passwords: Vec::new()
+            entries: Vec::new()
 		}
     }
 
     pub fn open(password: &str) -> io::Result<Database> {
-        // TODO do not generate salt, take one from
-		//
+        let mut salt = [0u8; SALT_SIZE]; // 16bytes of salt bcrypt
+        let mut output = [0u8; PASS_SIZE]; // output 24 bytes
 
-        let path = Path::new(DEFAULT_DB_LOCATION);
-        let display = path.display();
-        let mut file = try!(File::open(path));
+        let mut f = try!(File::open(Path::new(DEFAULT_DB_LOCATION)));
 
-        let mut buffer = String::new();
-        try!(file.read_to_string(&mut buffer));
+        // Read salt
+        match f.read(&mut salt){
+            Ok(SALT_SIZE) => (),
+            Ok(count) => return Err(
+                Error::new(
+                    ErrorKind::InvalidData,
+                    format!("Bad number of bytes {} read for salt.", count)
+                )
+            ),
+            Err(why) => return Err(why)
+        }
 
-        let deserialized: Vec<Entry> = serde_json::from_str(&buffer).unwrap();
+        // Read the rest
+        let mut buffer = Vec::new();
+        try!(f.read_to_end(&mut buffer));
+
+        // Run Bcrypt
+        bcrypt(BCRYPT_COST, &salt, password.as_bytes(), &mut output);
+
+        // Decrypt
+        let secret =  match SecretMsg::from_bytes(&buffer) {
+            Some(msg) => msg,
+            None => return Err(
+                Error::new(
+                    ErrorKind::InvalidData, "Too few bytes (less than NONCE + ZERO bytes of SecretMsg)."
+                    )
+                )
+        };
+
+        let key = SecretKey::from_slice(&output);
+        let dec = key.decrypt(&secret).unwrap();
+
+        // Deserialize
+        let deserialized: Vec<Entry> = serde_json::from_slice(&dec).unwrap();
         println!("deserialized: {:?}", deserialized);
 
         Ok(Database::new(password))
@@ -67,22 +91,22 @@ impl Database {
         // Open a file in write-only mode, returns `io::Result<File>`
         let mut file = try!(File::create(path));
 
-        let serialized = serde_json::to_string(&self.passwords).unwrap();
+        let serialized = serde_json::to_string(&self.entries).unwrap();
         // encrypt
-        let key = SecretKey::from_str(&self.get_pass());
+        let key = SecretKey::from_slice(&self.bcrypt_pass);
+        // let key = SecretKey::from_str(&self.get_pass());
         let enc: SecretMsg = key.encrypt(serialized.as_bytes());
 
-        // write bytes
-        try!(file.write(&self.bcrypt_pass));
+        // write salt first
+        try!(file.write(&self.bcrypt_salt));
+        try!(file.flush());
+        // write nonce + cipher directly (do not clone)
+        try!(file.write(&enc.nonce));
         try!(file.flush());
         try!(file.write(&enc.cipher));
         try!(file.flush());
 
         Ok(())
-        // match writeln!(file, "{}", serialized) {
-        //     Err(why) => {panic!("couldn't write to {}: {}", display, Error::description(&why))},
-        //     Ok(_) => {}//println!("successfully wrote to {}", display),
-        // }
     }
 
     fn get_pass(&self) -> String{
@@ -90,6 +114,6 @@ impl Database {
     }
 
     pub fn add(&mut self, entry: Entry){
-        self.passwords.push(entry);
+        self.entries.push(entry);
     }
 }

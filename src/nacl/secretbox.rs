@@ -142,7 +142,7 @@ impl SecretKey {
                                         sk.as_ptr()) {
                 0 => Some((&plaintext[ZERO_BYTES .. plaintext.len()]).to_vec()),
                 -2 => None,
-                _ => panic!("crypto_secretbox_open failed")
+                res => panic!(format!("crypto_secretbox_open failed, reason {}", res))
             }
         }
     }
