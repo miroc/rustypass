@@ -38,6 +38,10 @@ pub const NONCE_BYTES: usize = 24; // 192b
 /// Corresponds to crypto_secretbox_ZEROBYTES
 pub const ZERO_BYTES: usize = 32; // 256b
 
+#[derive(Debug, Clone, Copy)]
+pub enum SecretBoxError {
+    VerificationFail
+}
 
 /// Encapsulates both the nonce value and cipher text returned by `encrypt`.
 pub struct SecretMsg {
@@ -127,10 +131,7 @@ impl SecretKey {
 
     /// Using this box's secret key, decrypt the given ciphertext into
     /// plain text.
-    ///
-    /// If the cipher text fails to conform to the MAC (message was
-    /// tampered with or corrupted), then None will be returned instead.
-    pub fn decrypt(&self, msg: &SecretMsg) -> Option<Vec<u8>> {
+    pub fn decrypt(&self, msg: &SecretMsg) -> Result<Vec<u8>, SecretBoxError> {
         let &SecretKey(sk) = self;
         let mut plaintext: Vec<u8> = repeat(0u8).take(msg.cipher.len()).collect();
 
@@ -140,8 +141,8 @@ impl SecretKey {
                                         msg.cipher.len() as u64,
                                         msg.nonce.as_ptr(),
                                         sk.as_ptr()) {
-                0 => Some((&plaintext[ZERO_BYTES .. plaintext.len()]).to_vec()),
-                -2 => None,
+                0 => Ok((&plaintext[ZERO_BYTES .. plaintext.len()]).to_vec()),
+                -1 => Err(SecretBoxError::VerificationFail),
                 res => panic!(format!("crypto_secretbox_open failed, reason {}", res))
             }
         }
@@ -161,7 +162,7 @@ fn test_secretbox_sanity() {
 
         let decr_opt = key.decrypt(&SecretMsg { nonce: nonce, cipher: cipher });
 
-        assert!(decr_opt.is_some());
+        assert!(decr_opt.is_ok());
 
         let decr = decr_opt.unwrap();
         println!("dec:\t{:?}", decr);
@@ -208,7 +209,7 @@ fn test_secretbox_mac_sanity() {
         let decr = key.decrypt(&SecretMsg { nonce: nonce, cipher: c.clone() });
 
         println!("cipher:\t{:?}\ndecr:\t{:?}", c, decr);
-        assert!(decr.is_none());
+        assert!(decr.is_err());
     }
 
 }
@@ -226,7 +227,7 @@ fn test_secretbox_secretmsg() {
 
     let decr_opt = key.decrypt(&re_encr.unwrap());
 
-    assert!(decr_opt.is_some());
+    assert!(decr_opt.is_ok());
     assert!(decr_opt.unwrap() == msg);
 }
 
@@ -245,6 +246,6 @@ fn test_secretkey_tamper_resistance() {
         let plaintext = key.decrypt(&tampered);
 
         println!("msg:\t{:?}\ntampered:\t{:?}\nplaintext:\t{:?}", msg, tampered.cipher, plaintext);
-        assert!(plaintext.is_none());
+        assert!(plaintext.is_err());
     }
 }
