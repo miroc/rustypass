@@ -10,6 +10,7 @@ use serde_json;
 
 static DEFAULT_DB_LOCATION: &'static str = "./rustypass.db";
 
+const DB_VERSION: u8 = 1u8; // first version
 const SALT_SIZE: usize = 16;
 const PASS_SIZE: usize = 24;
 // TODO 10 iterations instead of 5
@@ -40,18 +41,21 @@ impl Database {
     pub fn open(password: &str) -> io::Result<Database> {
         let mut salt = [0u8; SALT_SIZE]; // 16bytes of salt bcrypt
         let mut output = [0u8; PASS_SIZE]; // output 24 bytes
+        let mut version_buffer = [0u8; 1];
 
+        // Read version
         let mut f = try!(File::open(Path::new(DEFAULT_DB_LOCATION)));
+        match f.read(&mut version_buffer){
+            Ok(size) => (),
+            Err(why) => return Err(why)
+        };
+        if version_buffer[0] != DB_VERSION {
+            return Database::invalid_data_error(format!("Cannot process DB version {}", version_buffer[0]));
+        }
 
-        // Read salt
         match f.read(&mut salt){
             Ok(SALT_SIZE) => (),
-            Ok(count) => return Err(
-                Error::new(
-                    ErrorKind::InvalidData,
-                    format!("Bad number of bytes {} read for salt.", count)
-                )
-            ),
+            Ok(count) => return Database::invalid_data_error(format!("Bad number of bytes {} read for salt.", count)),
             Err(why) => return Err(why)
         }
 
@@ -65,11 +69,7 @@ impl Database {
         // Decrypt
         let secret =  match SecretMsg::from_bytes(&buffer) {
             Some(msg) => msg,
-            None => return Err(
-                Error::new(
-                    ErrorKind::InvalidData, "Too few bytes (less than NONCE + ZERO bytes of SecretMsg)."
-                    )
-                )
+            None => return Database::invalid_data_error("Too few bytes (less than NONCE + ZERO bytes of SecretMsg).".to_string())
         };
 
         let key = SecretKey::from_slice(&output);
@@ -81,6 +81,10 @@ impl Database {
 
         Ok(Database::new(password))
 	}
+
+    fn invalid_data_error(text: String) -> io::Result<Database>{
+        Err(Error::new(ErrorKind::InvalidData, text))
+    }
 
     pub fn save(&self) -> io::Result<()>{
         // os independent path
@@ -96,6 +100,8 @@ impl Database {
         // let key = SecretKey::from_str(&self.get_pass());
         let enc: SecretMsg = key.encrypt(serialized.as_bytes());
 
+        // write version
+        try!(file.write(&[DB_VERSION]));
         // write salt first
         try!(file.write(&self.bcrypt_salt));
         try!(file.flush());
