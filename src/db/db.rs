@@ -38,14 +38,25 @@ impl Database {
 		}
     }
 
-    pub fn open(password: &str) -> io::Result<Database> {
+    pub fn open_from_file(password: &str) -> io::Result<Database> {
+        let mut file = try!(File::open(Path::new(DEFAULT_DB_LOCATION)));
+        Database::open(password, file)
+    }
+
+    pub fn save_to_file(&self) -> io::Result<()> {
+        let path = Path::new(DEFAULT_DB_LOCATION);
+        let display = path.display();
+        // Open the file in write-only mode
+        let mut file = try!(File::create(path));
+        self.save(file)
+    }
+
+    fn open<T: Read>(password: &str, mut src: T) -> io::Result<Database> {
         let mut salt = [0u8; SALT_SIZE]; // 16bytes of salt bcrypt
         let mut output = [0u8; PASS_SIZE]; // output 24 bytes
         let mut version_buffer = [0u8; 1];
 
-        // Read version
-        let mut f = try!(File::open(Path::new(DEFAULT_DB_LOCATION)));
-        match f.read(&mut version_buffer){
+        match src.read(&mut version_buffer){
             Ok(size) => (),
             Err(why) => return Err(why)
         };
@@ -53,7 +64,7 @@ impl Database {
             return Database::invalid_data_error(format!("Cannot process DB version {}", version_buffer[0]));
         }
 
-        match f.read(&mut salt){
+        match src.read(&mut salt){
             Ok(SALT_SIZE) => (),
             Ok(count) => return Database::invalid_data_error(format!("Bad number of bytes {} read for salt.", count)),
             Err(why) => return Err(why)
@@ -61,7 +72,7 @@ impl Database {
 
         // Read the rest
         let mut buffer = Vec::new();
-        try!(f.read_to_end(&mut buffer));
+        try!(src.read_to_end(&mut buffer));
 
         // Run Bcrypt
         bcrypt(BCRYPT_COST, &salt, password.as_bytes(), &mut output);
@@ -75,9 +86,8 @@ impl Database {
         let key = SecretKey::from_slice(&output);
         let dec = key.decrypt(&secret).unwrap();
 
-        // Deserialize
         let deserialized: Vec<Entry> = serde_json::from_slice(&dec).unwrap();
-        println!("deserialized: {:?}", deserialized);
+        // println!("deserialized: {:?}", deserialized);
 
         Ok(Database::new(password))
 	}
@@ -85,34 +95,29 @@ impl Database {
     fn invalid_data_error(text: String) -> io::Result<Database>{
         Err(Error::new(ErrorKind::InvalidData, text))
     }
-
-    pub fn save(&self) -> io::Result<()>{
-        // os independent path
-        let path = Path::new(DEFAULT_DB_LOCATION);
-        let display = path.display();
-
-        // Open a file in write-only mode, returns `io::Result<File>`
-        let mut file = try!(File::create(path));
+    
+    fn save<T: Write>(&self, mut dest: T) -> io::Result<()>{
 
         let serialized = serde_json::to_string(&self.entries).unwrap();
-        // encrypt
+
         let key = SecretKey::from_slice(&self.bcrypt_pass);
-        // let key = SecretKey::from_str(&self.get_pass());
         let enc: SecretMsg = key.encrypt(serialized.as_bytes());
 
         // write version
-        try!(file.write(&[DB_VERSION]));
+        try!(dest.write(&[DB_VERSION]));
         // write salt first
-        try!(file.write(&self.bcrypt_salt));
-        try!(file.flush());
-        // write nonce + cipher directly (do not clone)
-        try!(file.write(&enc.nonce));
-        try!(file.flush());
-        try!(file.write(&enc.cipher));
-        try!(file.flush());
+        try!(dest.write(&self.bcrypt_salt));
+        try!(dest.flush());
+        // write nonce + encrypted data
+        try!(dest.write(&enc.nonce));
+        try!(dest.flush());
+        try!(dest.write(&enc.cipher));
+        try!(dest.flush());
 
         Ok(())
     }
+
+
 
     pub fn add(&mut self, entry: Entry){
         self.entries.push(entry);

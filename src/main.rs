@@ -49,10 +49,10 @@ fn main() {
         db.add(Entry::new("service_a", "name_a", "pass_a"));
         db.add(Entry::new("service_b", "name_b", "pass_b"));
         db.add(Entry::new("service_c", "name_c", "pass_c"));
-        db.save();
+        db.save_to_file();
     }
     {
-        let mut db = match Database::open("test") {
+        let mut db = match Database::open_from_file("test") {
             Err(why) => {
                 panic!("couldn't open {}", Error::description(&why));
             }
