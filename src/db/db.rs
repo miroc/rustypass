@@ -19,28 +19,28 @@ const BCRYPT_COST: u32 = 5;
 pub struct Database {
     bcrypt_salt: [u8; SALT_SIZE],
     bcrypt_pass: [u8; PASS_SIZE],
-    entries: Vec<Entry>
+    pub entries: Vec<Entry>
 }
 
 impl Database {
-    pub fn new(password: &str) -> Database {
+    pub fn empty(password: &str) -> Database {
         let mut salt = [0u8; SALT_SIZE]; // 16bytes of salt bcrypt
-        let mut output = [0u8; PASS_SIZE]; // output 24 bytes
+        let mut bcrypt_output = [0u8; PASS_SIZE]; // output 24 bytes
         OsRng::new().unwrap().fill_bytes(&mut salt);
 
         // TODO take only first 72 characters of input
-        bcrypt(BCRYPT_COST, &salt, password.as_bytes(), &mut output);
+        bcrypt(BCRYPT_COST, &salt, password.as_bytes(), &mut bcrypt_output);
 
         Database {
             bcrypt_salt: salt,
-            bcrypt_pass: output,
+            bcrypt_pass: bcrypt_output,
             entries: Vec::new()
 		}
     }
 
     pub fn open_from_file(password: &str) -> io::Result<Database> {
         let mut file = try!(File::open(Path::new(DEFAULT_DB_LOCATION)));
-        Database::open(password, file)
+        Database::open(password, &mut file)
     }
 
     pub fn save_to_file(&self) -> io::Result<()> {
@@ -48,12 +48,12 @@ impl Database {
         let display = path.display();
         // Open the file in write-only mode
         let mut file = try!(File::create(path));
-        self.save(file)
+        self.save(&mut file)
     }
 
-    fn open<T: Read>(password: &str, mut src: T) -> io::Result<Database> {
+    pub fn open<T: Read>(password: &str, src: &mut T) -> io::Result<Database> {
         let mut salt = [0u8; SALT_SIZE]; // 16bytes of salt bcrypt
-        let mut output = [0u8; PASS_SIZE]; // output 24 bytes
+        let mut bcrypt_output = [0u8; PASS_SIZE]; // output 24 bytes
         let mut version_buffer = [0u8; 1];
 
         match src.read(&mut version_buffer){
@@ -75,7 +75,7 @@ impl Database {
         try!(src.read_to_end(&mut buffer));
 
         // Run Bcrypt
-        bcrypt(BCRYPT_COST, &salt, password.as_bytes(), &mut output);
+        bcrypt(BCRYPT_COST, &salt, password.as_bytes(), &mut bcrypt_output);
 
         // Decrypt
         let secret =  match SecretMsg::from_bytes(&buffer) {
@@ -83,21 +83,19 @@ impl Database {
             None => return Database::invalid_data_error("Too few bytes (less than NONCE + ZERO bytes of SecretMsg).".to_string())
         };
 
-        let key = SecretKey::from_slice(&output);
+        let key = SecretKey::from_slice(&bcrypt_output);
         let dec = key.decrypt(&secret).unwrap();
 
-        let deserialized: Vec<Entry> = serde_json::from_slice(&dec).unwrap();
-        // println!("deserialized: {:?}", deserialized);
+        let deserialized_entries: Vec<Entry> = serde_json::from_slice(&dec).unwrap();
 
-        Ok(Database::new(password))
+        Ok(Database{
+            bcrypt_salt: salt,
+            bcrypt_pass: bcrypt_output,
+            entries: deserialized_entries
+        })
 	}
 
-    fn invalid_data_error(text: String) -> io::Result<Database>{
-        Err(Error::new(ErrorKind::InvalidData, text))
-    }
-    
-    fn save<T: Write>(&self, mut dest: T) -> io::Result<()>{
-
+    pub fn save<T: Write>(&self, dest: &mut T) -> io::Result<()>{
         let serialized = serde_json::to_string(&self.entries).unwrap();
 
         let key = SecretKey::from_slice(&self.bcrypt_pass);
@@ -117,9 +115,36 @@ impl Database {
         Ok(())
     }
 
-
-
     pub fn add(&mut self, entry: Entry){
         self.entries.push(entry);
+    }
+
+    fn invalid_data_error(text: String) -> io::Result<Database>{
+        Err(Error::new(ErrorKind::InvalidData, text))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use db::Entry;
+    use db::Database;
+    use std::io::Cursor;
+    use std::io::Read;
+
+    #[test]
+    fn test_save_and_load() {
+        let mut buff: Cursor<Vec<u8>> = Cursor::new(vec![]);
+        {
+            let mut db = Database::empty("test");
+            db.add(Entry::new("service_a", "name_a", "pass_a"));
+            db.add(Entry::new("service_b", "name_b", "pass_b"));
+            db.add(Entry::new("service_c", "name_c", "pass_c"));
+            db.save(&mut buff);
+        }
+
+        // Cursor position has to be reset before reading
+        buff.set_position(0);
+        let db = Database::open("test", &mut buff).unwrap();
+        assert_eq!(db.entries.len(), 3);
     }
 }
