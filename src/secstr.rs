@@ -1,5 +1,4 @@
-use libc::{c_void, size_t};
-use libc::funcs::posix88::mman;
+use libc::{c_void, size_t, mlock};
 use std::ptr;
 use std::fmt;
 use rand::{ Rng, OsRng };
@@ -40,7 +39,8 @@ impl SecStr {
     /// lie in memory. The string will be automatically encrypted and deleted.
     pub fn new(string: String) -> SecStr {
         // Lock the string against swapping
-        unsafe { mman::mlock(string.as_ptr() as *const c_void,
+
+        unsafe { mlock(string.as_ptr() as *const c_void,
                              string.len() as size_t); }
 
         let mut rng = OsRng::new().unwrap();
@@ -52,7 +52,7 @@ impl SecStr {
             iv: (0..stream::NONCE_BYTES).map(|_| rng.gen::<u8>()).collect()
         };
         unsafe {
-            mman::mlock(sec_str.encrypted_string.as_ptr() as *const c_void,
+            mlock(sec_str.encrypted_string.as_ptr() as *const c_void,
                              sec_str.encrypted_string.len() as size_t);
         }
         sec_str.lock();
@@ -120,13 +120,13 @@ impl fmt::Display for SecStr {
 impl Drop for SecStr {
     fn drop(&mut self) {
         self.delete();
-        unsafe { mman::munlock(self.string.as_ptr() as *const c_void,
+        unsafe { mlock(self.string.as_ptr() as *const c_void,
                                self.string.len() as size_t);
 
             ptr::write_bytes(self.encrypted_string.as_ptr() as *mut c_void, 0u8,
                                                 self.encrypted_string.len());
 
-            mman::munlock(self.encrypted_string.as_ptr() as *const c_void,
+            mlock(self.encrypted_string.as_ptr() as *const c_void,
                                self.encrypted_string.len() as size_t); }
     }
 }

@@ -5,13 +5,20 @@ authors = ["Miroslav Svitok <mirosvitok@gmail.com>"]
 build = "build.rs"
 
 [dependencies]
+# serde - serialization framework
 serde = "*"
 serde_json = "*"
 serde_macros = "*"
+# getopt for retrieving command line arguments
 getopts = "0.2"
-libc = "0.1.10"
+# libc for embeding c code
+libc = "0.2.2"
+# random numbers
 rand = "0.3.11"
+# bcrypt
 rust-crypto = "*"
+# invisible passwords input
+rpassword = "0.1.0"
 
 [build-dependencies]
 gcc = "0.3"
