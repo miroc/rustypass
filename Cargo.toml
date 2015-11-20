@@ -1,5 +1,5 @@
 [package]
-name = "rusty_pass"
+name = "rpass"
 version = "0.1.0"
 authors = ["Miroslav Svitok <mirosvitok@gmail.com>"]
 build = "build.rs"
