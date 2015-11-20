@@ -14,7 +14,7 @@ const DB_VERSION: u8 = 1u8; // first version
 const SALT_SIZE: usize = 16;
 const PASS_SIZE: usize = 24;
 // TODO 10 iterations instead of 5
-const BCRYPT_COST: u32 = 5;
+const BCRYPT_COST: u32 = 10;
 
 pub struct Database {
     bcrypt_salt: [u8; SALT_SIZE],
