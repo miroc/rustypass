@@ -13,7 +13,6 @@ static DEFAULT_DB_LOCATION: &'static str = "./rustypass.db";
 const DB_VERSION: u8 = 1u8; // first version
 const SALT_SIZE: usize = 16;
 const PASS_SIZE: usize = 24;
-// TODO 10 iterations instead of 5
 const BCRYPT_COST: u32 = 10;
 
 pub struct Database {
@@ -38,14 +37,14 @@ impl Database {
 		}
     }
 
-    pub fn open_from_file(password: &str) -> io::Result<Database> {
-        let mut file = try!(File::open(Path::new(DEFAULT_DB_LOCATION)));
+    pub fn open_from_file(file_path: &str, password: &str) -> io::Result<Database> {
+        let mut file = try!(File::open(Path::new(file_path)));
         Database::open(password, &mut file)
     }
 
-    pub fn save_to_file(&self) -> io::Result<()> {
-        let path = Path::new(DEFAULT_DB_LOCATION);
-        let display = path.display();
+    pub fn save_to_file(&self, path: &Path) -> io::Result<()> {
+        // let path = Path::new(file_path);
+        // let display = path.display();
         // Open the file in write-only mode
         let mut file = try!(File::create(path));
         self.save(&mut file)
