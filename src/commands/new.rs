@@ -2,50 +2,54 @@ use rpassword::read_password;
 use std::path::Path;
 use std::fs::PathExt;
 use db::Database;
+use db::DatabaseInFile;
 
 static USAGE: &'static str = "Invalid arguments.\n
 Usage: rpass new <filename>";
 static NEW_PASS: &'static str = "Please enter the master password:";
 static NEW_PASS_CONFIRM: &'static str = "Confirm the password:";
 
+const PASS_MIN_LENGTH: usize = 2;
+
 fn usage(){
 	println!("{}", USAGE);
 }
 
-pub fn call(params: &[String]) {
+pub fn call(params: &[String]) -> Option<Box<DatabaseInFile>>{
 	if params.len() != 1 {
 		usage();
+		return None;
 	} else {
 		let db_path = Path::new(&params[0]);
 
 		if db_path.exists(){
-			println!("File already exists, cannot create database.");
-			return;
+			println!("File at path '{}' already exists, cannot create new database.", &params[0]);
+			return None;
 		}
 
 		let pass = get_pass();
-		println!("The password is: '{}'", pass);
-		let db = Database::empty(pass.as_ref());
-		db.save_to_file(&db_path);
+		let database = Database::empty(pass.as_ref());
 
-		// println!("new database created, file name {}", params[0]);
-		// db.add(
-			// Entry::new(
-				// params[0].as_ref(),
-				// params[1].as_ref(),
-				// &params[2]
-				//&params[2].into_bytes()
-				// )
-		// );
+		return match database.save_to_file(&db_path) {
+			Ok(_) => Some(Box::new(
+				DatabaseInFile{
+					db: database,
+					filepath: params[0].clone()
+				}
+			)),
+			Err(why) => {
+				println!("Error creating file, reason: {}", why);
+				None
+			}
+		}
 	}
-	//println!("size of matches {}", 1);
 }
 
 fn get_pass() -> String{
 	loop {
 		println!("Please enter new master password:");
 		let password = read_password().unwrap();
-		if password.len() < 10 {
+		if password.len() < PASS_MIN_LENGTH {
 			println!("Password is too short (has to be at least 10 characters).");
 			continue;
 		}

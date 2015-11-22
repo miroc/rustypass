@@ -11,3 +11,12 @@ Commands:
 
 Options:
     -h, --help\t Show this help";
+
+pub static DB_COMMANDS: &'static str = "Available commands:
+    list \t List all entries
+    show <entry> \t Show entry details
+    get <entry>\t Copy entry password to clipboard
+    add <entry>\t Add new entry
+    remove <entry>\t Remove entry";
+
+//Tip: You don't have to type entry's full name, type only prefix and press TAB to autocomplete.";

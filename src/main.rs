@@ -14,8 +14,10 @@ extern crate rpassword;
 use getopts::Options;
 use std::env;
 use std::error::Error;
+use std::io;
+use std::io::Write;
 use secstr::SecStr;
-use db::{Database, Entry};
+use db::{Database, Entry, DatabaseInFile};
 
 mod secstr;
 mod texts;
@@ -43,18 +45,59 @@ fn main() {
         return;
     }
 
-
     let command = matches.free.get(0);
-    // //
     match command {
          Some(value) => match value.as_ref() {
             "new" => {
-                commands::new::call(&matches.free[1..]);
+                let opt_db = commands::new::call(&matches.free[1..]);
+                if opt_db.is_some(){
+                    println!("Database successfully created.");
+                    command_loop(opt_db.unwrap());
+                }
             },
             "open" => {
+                let opt_db = commands::open::call(&matches.free[1..]);
+                if opt_db.is_some(){
+                    println!("Database successfully opened.");
+                    command_loop(opt_db.unwrap());
+                }
             },
-            _ => println!("unknown command '{}'", value),
+            _ => {
+                println!("Unknown command '{}'", value);
+                usage()
+            }
         },
-        None => panic!("no command!"),
+        None => panic!("No command!"),
     }
+}
+
+fn command_loop(file_db: Box<DatabaseInFile>){
+    print_db_commands();
+
+    loop {
+        let mut input = String::new();
+        print!("rpass> ");
+        io::stdout().flush();
+        let res = io::stdin().read_line(&mut input);
+        if res.is_err(){
+            println!("Error reading input, terminating");
+            return;
+        }
+
+        let words: Vec<&str> = input.split_whitespace().collect();
+
+        match words[0] {
+            "list" => commands::list::call(&file_db),
+            "show" => {}
+            "get" => {}
+            "add" => {}
+            "remove" => {}
+            _ => print_db_commands()
+        }
+
+    }
+}
+
+fn print_db_commands(){
+    println!("{}", texts::DB_COMMANDS);
 }

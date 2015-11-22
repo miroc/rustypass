@@ -15,6 +15,11 @@ const SALT_SIZE: usize = 16;
 const PASS_SIZE: usize = 24;
 const BCRYPT_COST: u32 = 10;
 
+pub struct DatabaseInFile {
+    pub db: Database,
+    pub filepath: String
+}
+
 pub struct Database {
     bcrypt_salt: [u8; SALT_SIZE],
     bcrypt_pass: [u8; PASS_SIZE],
@@ -37,8 +42,9 @@ impl Database {
 		}
     }
 
-    pub fn open_from_file(file_path: &str, password: &str) -> io::Result<Database> {
-        let mut file = try!(File::open(Path::new(file_path)));
+    pub fn open_from_file(path: &Path, password: &str) -> io::Result<Database> {
+        // let mut file = try!(File::open(Path::new(file_path)));
+        let mut file = try!(File::open(path));
         Database::open(password, &mut file)
     }
 

@@ -1,25 +1,35 @@
-//extern crate getopts;
-use db::Entry;
-use db::Database;
+use db::{Database, Entry, DatabaseInFile};
+use std::path::Path;
+use std::fs::PathExt;
+use rpassword::read_password;
 
-static USAGE: &'static str = "Usage: rusty_pass add <title> <username> <password>";
+static USAGE: &'static str = "Usage: rpass open <filename>";
 
 fn usage(){
 	println!("{}", USAGE);
 }
 
-pub fn call(params: &[String], db: &mut Database) {
-	if params.len() != 3 {
-		usage();
-	} else {
-		db.add(
-			Entry::new(
-				params[0].as_ref(),
-				params[1].as_ref(),
-				&params[2]
-				//&params[2].into_bytes()
-				)
-		);
+pub fn call(params: &[String]) -> Option<Box<DatabaseInFile>>{
+	let db_path = Path::new(&params[0]);
+	if !db_path.exists(){
+		println!("No such file exists.");
+		return None;
 	}
-	//println!("size of matches {}", 1);
+
+	println!("Please enter master password:");
+	let password = read_password().unwrap();
+
+	let res = Database::open_from_file(&db_path, &password);
+	match res {
+		Ok(database) => Some(Box::new(
+			DatabaseInFile{
+				db: database,
+				filepath: params[0].clone()
+			}
+		)),
+		Err(why) => {
+			println!("Error opening file, reason: {}", why);
+			None
+		}
+	}
 }
