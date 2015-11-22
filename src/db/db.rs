@@ -20,6 +20,12 @@ pub struct DatabaseInFile {
     pub filepath: String
 }
 
+impl DatabaseInFile {
+    pub fn save(&self) -> io::Result<()>{
+        self.db.save_to_file(Path::new(&self.filepath))
+    }
+}
+
 pub struct Database {
     bcrypt_salt: [u8; SALT_SIZE],
     bcrypt_pass: [u8; PASS_SIZE],

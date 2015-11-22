@@ -71,7 +71,7 @@ fn main() {
     }
 }
 
-fn command_loop(file_db: Box<DatabaseInFile>){
+fn command_loop(mut file_db: Box<DatabaseInFile>){
     print_db_commands();
 
     loop {
@@ -88,9 +88,9 @@ fn command_loop(file_db: Box<DatabaseInFile>){
 
         match words[0] {
             "list" => commands::list::call(&file_db),
+            "add" => commands::add::call(&mut file_db, &words[1..]),
             "show" => {}
             "get" => {}
-            "add" => {}
             "remove" => {}
             _ => print_db_commands()
         }
