@@ -48,8 +48,8 @@ fn main() {
     let command = matches.free.get(0);
     match command {
          Some(value) => match value.as_ref() {
-            "new" => {
-                let opt_db = commands::new::call(&matches.free[1..]);
+            "create" => {
+                let opt_db = commands::create::call(&matches.free[1..]);
                 if opt_db.is_some(){
                     println!("Database successfully created.");
                     command_loop(opt_db.unwrap());
@@ -88,13 +88,12 @@ fn command_loop(mut file_db: Box<DatabaseInFile>){
 
         match words[0] {
             "list" => commands::list::call(&file_db),
-            "add" => commands::add::call(&mut file_db, &words[1..]),
-            "show" => {}
-            "get" => {}
-            "remove" => {}
+            "add" => commands::new::call(&mut file_db, &words[1..]),
+            "show" => commands::show::call(&file_db, &words[1..]),
+            "get" => commands::get::call(&file_db, &words[1..]),
+            "remove" => commands::remove::call(&mut file_db, &words[1..]),
             _ => print_db_commands()
         }
-
     }
 }
 

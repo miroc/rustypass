@@ -130,9 +130,27 @@ impl Database {
         self.entries.push(entry);
     }
 
+    pub fn get(&self, entry_title: &str) -> Option<&Entry> {
+        self.entries.iter().find(|entry| entry.title.eq(entry_title))
+    }
+
+    pub fn remove(&mut self, entry_title: &str) -> bool{
+        let pos = self.entries
+            .iter()
+            .position(|entry| entry.title.eq(entry_title));
+        return match pos {
+            Some(index) => {
+                self.entries.remove(index);
+                true
+            }
+            None =>  false
+        }
+    }
+
     fn invalid_data_error(text: String) -> io::Result<Database>{
         Err(Error::new(ErrorKind::InvalidData, text))
     }
+
 }
 
 #[cfg(test)]

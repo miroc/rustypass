@@ -1,66 +1,56 @@
 use rpassword::read_password;
 use std::path::Path;
 use std::fs::PathExt;
-use db::Database;
-use db::DatabaseInFile;
+use db::{Database, DatabaseInFile, Entry};
+use std::io;
+use std::io::Write;
 
-static USAGE: &'static str = "Invalid arguments.\n
-Usage: rpass new <filename>";
-static NEW_PASS: &'static str = "Please enter the master password:";
-static NEW_PASS_CONFIRM: &'static str = "Confirm the password:";
+pub fn call(file_db: &mut Box<DatabaseInFile>, params: &[&str]){
+	let mut input_title = String::new();
+	let mut input_username = String::new();
+	let mut input_url = String::new();
+	// let mut input_password = String::new();
 
-const PASS_MIN_LENGTH: usize = 2;
-
-fn usage(){
-	println!("{}", USAGE);
-}
-
-pub fn call(params: &[String]) -> Option<Box<DatabaseInFile>>{
-	if params.len() != 1 {
-		usage();
-		return None;
-	} else {
-		let db_path = Path::new(&params[0]);
-
-		if db_path.exists(){
-			println!("File at path '{}' already exists, cannot create new database.", &params[0]);
-			return None;
-		}
-
-		let pass = get_pass();
-		let database = Database::empty(pass.as_ref());
-
-		return match database.save_to_file(&db_path) {
-			Ok(_) => Some(Box::new(
-				DatabaseInFile{
-					db: database,
-					filepath: params[0].clone()
-				}
-			)),
-			Err(why) => {
-				println!("Error creating file, reason: {}", why);
-				None
-			}
-		}
+	print!("Title: ");
+	io::stdout().flush();
+	io::stdin().read_line(&mut input_title);
+	if input_title.is_empty(){
+		println!("Title cannot be empty.");
+		return;
 	}
-}
 
-fn get_pass() -> String{
-	loop {
-		println!("Please enter new master password:");
-		let password = read_password().unwrap();
-		if password.len() < PASS_MIN_LENGTH {
-			println!("Password is too short (has to be at least 10 characters).");
-			continue;
-		}
+	print!("Username: ");
+	io::stdout().flush();
+	io::stdin().read_line(&mut input_username);
+	if input_username.is_empty(){
+		println!("Username cannot be empty.");
+		return;
+	}
 
-		println!("{}", NEW_PASS_CONFIRM);
-		let password2 = read_password().unwrap();
+	print!("Password: ");
+	io::stdout().flush();
+	let input_password = read_password().unwrap();
+	if input_password.is_empty(){
+		println!("Password cannot be empty.");
+		return;
+	}
 
-		if password != password2 {
-			println!("Passwords are not the same.");
-			continue;
-		}
-		return password;
+	print!("URL (optional): ");
+	io::stdout().flush();
+	let mut input_url = String::new();
+	io::stdin().read_line(&mut input_url);
+
+	file_db.db.add(
+		Entry::new(
+			input_title.trim(),
+			input_username.trim(),
+			input_password.trim()
+		)
+	);
+
+	let res = file_db.save();
+	match res {
+		Err(why) => println!("Error while adding new entry, reason: {}.", why),
+		_ => println!("New entry '{}' added.", input_title.trim())
 	}
 }

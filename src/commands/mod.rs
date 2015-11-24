@@ -1,5 +1,8 @@
 #[allow(dead_code)]
-pub mod new;
+pub mod create;
 pub mod open;
 pub mod list;
-pub mod add;
+pub mod new;
+pub mod show;
+pub mod remove;
+pub mod get;

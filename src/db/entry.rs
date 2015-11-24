@@ -3,7 +3,7 @@ use secstr::SecStr;
 // The `derive` attribute automatically creates the implementation
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Entry {
-    title: String,
+    pub title: String,
     username: String,
     password: SecStr
 }
@@ -13,9 +13,27 @@ impl Entry {
 		Entry {
 			title: title.into(),
 			username: username.into(),
-			password: SecStr::new(password.into()) // todo avoid cloning??
+			password: SecStr::new(password.into()) // TODO avoid cloning??
 		}
 	}
+
+    pub fn print_short_info_desc(){
+        macro_rules! row {() => ("{0: <10} | {1: <10}")};
+        println!(row!(), "Title", "Username");
+    }
+
+    pub fn print_short_info(&self){
+        macro_rules! row {() => ("{0: <10} | {1: <10}")};
+        println!(row!(), self.title, self.username);
+    }
+
+    pub fn print_full_info(&self){
+        macro_rules! row {() => ("{0: <10} {1: <10}")};
+
+        println!(row!(), "Title:", self.title);
+        println!(row!(), "Username:", self.username);
+        println!(row!(), "Password:", self.password);
+    }
 }
 
 /* De/Serialization infrastructure */

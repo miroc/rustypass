@@ -14,9 +14,10 @@ Options:
 
 pub static DB_COMMANDS: &'static str = "Available commands:
     list \t List all entries
+    new \t Add new entry
     show <entry> \t Show entry details
-    get <entry>\t Copy entry password to clipboard
-    add <entry>\t Add new entry
+    copy <entry>\t Copy entry password to clipboard
+    edit <entry> \t Edit entry details
     remove <entry>\t Remove entry";
 
 //Tip: You don't have to type entry's full name, type only prefix and press TAB to autocomplete.";
