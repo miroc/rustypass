@@ -88,9 +88,10 @@ fn command_loop(mut file_db: Box<DatabaseInFile>){
 
         match words[0] {
             "list" => commands::list::call(&file_db),
-            "add" => commands::new::call(&mut file_db, &words[1..]),
+            "new" => commands::new::call(&mut file_db, &words[1..]),
             "show" => commands::show::call(&file_db, &words[1..]),
-            "get" => commands::get::call(&file_db, &words[1..]),
+            "copy" => commands::copy::call(&file_db, &words[1..]),
+            "edit" => commands::remove::call(&mut file_db, &words[1..]),
             "remove" => commands::remove::call(&mut file_db, &words[1..]),
             _ => print_db_commands()
         }

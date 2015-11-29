@@ -1,7 +1,5 @@
-use rpassword::read_password;
-use std::path::Path;
-use std::fs::PathExt;
-use db::{Database, DatabaseInFile, Entry};
+
+use db::{DatabaseInFile, Entry};
 
 pub fn call(file_db: &Box<DatabaseInFile>){
 	// Print table header

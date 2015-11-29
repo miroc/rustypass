@@ -13,7 +13,7 @@ impl Entry {
 		Entry {
 			title: title.into(),
 			username: username.into(),
-			password: SecStr::new(password.into()) // TODO avoid cloning??
+			password: SecStr::new(password.into())
 		}
 	}
 
@@ -34,47 +34,8 @@ impl Entry {
         println!(row!(), "Username:", self.username);
         println!(row!(), "Password:", self.password);
     }
+
+    pub fn copy_pass_to_clipboard(&self){
+        println!("Error: NOT IMPLEMENTED YET");
+    }
 }
-
-/* De/Serialization infrastructure */
-// TODO replace with derived serialization
-// impl Serialize for Entry {
-//     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-//         where S: Serializer
-//     {
-//         serializer.visit_struct("Entry", EntryMapVisitor {
-//             value: self,
-//             state: 0,
-//         })
-//     }
-// }
-
-// struct EntryMapVisitor<'a> {
-//     value: &'a Entry,
-//     state: u8,
-// }
-// impl<'a> MapVisitor for EntryMapVisitor<'a> {
-//     fn visit<S>(&mut self, serializer: &mut S) -> Result<Option<()>, S::Error>
-//         where S: Serializer
-//     {
-//         match self.state {
-//             0 => {
-//                 self.state += 1;
-//                 Ok(Some(try!(serializer.visit_struct_elt("title", &self.value.title))))
-//             }
-//             1 => {
-//                 self.state += 1;
-//                 Ok(Some(try!(serializer.visit_struct_elt("username", &self.value.username))))
-//             }
-//             2 => {
-//                 self.state += 1;
-//                 Ok(Some(try!(serializer.visit_struct_elt("password", &self.value.password))))
-//             }
-//             _ => {
-//                 Ok(None)
-//             }
-//         }
-//     }
-// }
-//
-//
