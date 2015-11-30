@@ -1,6 +1,5 @@
-use db::{Database, Entry, DatabaseInFile};
+use db::{Database, DatabaseInFile};
 use std::path::Path;
-use std::fs::PathExt;
 use rpassword::read_password;
 
 static USAGE: &'static str = "Usage: rpass open <filename>";
@@ -10,6 +9,11 @@ fn usage(){
 }
 
 pub fn call(params: &[String]) -> Option<Box<DatabaseInFile>>{
+	if params.len() == 0 {
+		usage();
+		return None;
+	}
+
 	let db_path = Path::new(&params[0]);
 	if !db_path.exists(){
 		println!("No such file exists.");

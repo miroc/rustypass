@@ -1,16 +1,14 @@
 use std::path::Path;
 use std::fs::File;
 use std::io::{Write, Read, self, Error, ErrorKind};
-use secstr::SecStr;
 use db::Entry;
 use nacl::secretbox::{SecretKey, SecretMsg};
 use rand::{ Rng, OsRng };
 use crypto::bcrypt::bcrypt;
 use serde_json;
 
-static DEFAULT_DB_LOCATION: &'static str = "./rustypass.db";
+const DB_VERSION: u8 = 1u8;
 
-const DB_VERSION: u8 = 1u8; // first version
 const SALT_SIZE: usize = 16;
 const PASS_SIZE: usize = 24;
 const BCRYPT_COST: u32 = 10;
@@ -68,7 +66,7 @@ impl Database {
         let mut version_buffer = [0u8; 1];
 
         match src.read(&mut version_buffer){
-            Ok(size) => (),
+            Ok(_) => (),
             Err(why) => return Err(why)
         };
         if version_buffer[0] != DB_VERSION {

@@ -1,9 +1,4 @@
-use rpassword::read_password;
-use std::path::Path;
-use std::fs::PathExt;
-use db::{Database, DatabaseInFile, Entry};
-use std::io;
-use std::io::Write;
+use db::DatabaseInFile;
 
 static USAGE: &'static str = "Invalid arguments.
 Usage: rpass edit <entry>";
@@ -17,12 +12,5 @@ pub fn call(file_db: &mut Box<DatabaseInFile>, params: &[&str]){
         usage();
         return;
     }
-
-    let entry_title = params[0];
-    match file_db.db.get(entry_title) {
-        Some(entry) => {
-            println!("Error: NOT IMPLEMENTED YET");
-        },
-        None => println!("No entry named '{}' was found.", entry_title)
-    }
+    println!("Error: NOT IMPLEMENTED YET");
 }

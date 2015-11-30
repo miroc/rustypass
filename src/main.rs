@@ -1,5 +1,4 @@
 #![feature(custom_derive, plugin)]
-#![feature(path_ext_deprecated)] // for Path.exists()
 #![plugin(serde_macros)]
 
 extern crate serde;
@@ -13,11 +12,9 @@ extern crate rpassword;
 
 use getopts::Options;
 use std::env;
-use std::error::Error;
 use std::io;
 use std::io::Write;
-use secstr::SecStr;
-use db::{Database, Entry, DatabaseInFile};
+use db::{DatabaseInFile};
 
 mod secstr;
 mod texts;
@@ -31,7 +28,6 @@ fn usage(){
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let program = args[0].clone();
 
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
@@ -77,7 +73,7 @@ fn command_loop(mut file_db: Box<DatabaseInFile>){
     loop {
         let mut input = String::new();
         print!("rpass> ");
-        io::stdout().flush();
+        io::stdout().flush().unwrap();
         let res = io::stdin().read_line(&mut input);
         if res.is_err(){
             println!("Error reading input, terminating");
@@ -88,10 +84,10 @@ fn command_loop(mut file_db: Box<DatabaseInFile>){
 
         match words[0] {
             "list" => commands::list::call(&file_db),
-            "new" => commands::new::call(&mut file_db, &words[1..]),
+            "new" => commands::new::call(&mut file_db),
             "show" => commands::show::call(&file_db, &words[1..]),
             "copy" => commands::copy::call(&file_db, &words[1..]),
-            "edit" => commands::remove::call(&mut file_db, &words[1..]),
+            "edit" => commands::edit::call(&mut file_db, &words[1..]),
             "remove" => commands::remove::call(&mut file_db, &words[1..]),
             _ => print_db_commands()
         }

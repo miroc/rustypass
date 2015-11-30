@@ -1,8 +1,6 @@
 use rpassword::read_password;
 use std::path::Path;
-use std::fs::PathExt;
-use db::Database;
-use db::DatabaseInFile;
+use db::{Database, DatabaseInFile};
 
 static USAGE: &'static str = "Invalid arguments.\n
 Usage: rpass create <filename>";

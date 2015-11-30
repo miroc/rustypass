@@ -1,10 +1,11 @@
+#![allow(dead_code)]
+
 use libc::{c_void, size_t, mlock};
 use std::ptr;
 use std::fmt;
 use rand::{ Rng, OsRng };
 use nacl::stream::{self, stream_encrypt_xor};
 use serde::ser::{Serialize, Serializer};
-use serde::de::impls::PrimitiveVisitor;
 use serde::de::{Deserialize, Deserializer, Visitor, Error};
 
 #[doc = "

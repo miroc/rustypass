@@ -1,9 +1,4 @@
-use rpassword::read_password;
-use std::path::Path;
-use std::fs::PathExt;
-use db::{Database, DatabaseInFile, Entry};
-use std::io;
-use std::io::Write;
+use db::DatabaseInFile;
 
 static USAGE: &'static str = "Invalid arguments.
 Usage: rpass show <entry>";
