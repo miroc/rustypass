@@ -10,7 +10,7 @@ Rustypass is a command line based password manager written in Rust. At this poin
   * NaCl [Secretbox](http://nacl.cr.yp.to/secretbox.html) structure serialized to bytes, 
 encrypted with password derived from master password using Bcrypt.
 * Secretbox structure uses authenticated encryption (XSalsa20 + Poly1305) and contains database of entries serialized to JSON.
-* Passwords are stored in SecStr structure, which keeps passwords encrypted in the memory (= obfuscation).
+* Passwords are stored in SecStr structure, which keeps them encrypted in the memory (= obfuscation).
 
 ## Compilation
 First, you need to install Rust with Cargo, see the [official page](https://www.rust-lang.org/downloads.html). Nightly build (tested on Nightly 1.6)
