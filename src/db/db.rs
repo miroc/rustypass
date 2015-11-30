@@ -53,8 +53,6 @@ impl Database {
     }
 
     pub fn save_to_file(&self, path: &Path) -> io::Result<()> {
-        // let path = Path::new(file_path);
-        // let display = path.display();
         // Open the file in write-only mode
         let mut file = try!(File::create(path));
         self.save(&mut file)
